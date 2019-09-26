@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit backupGlobals="false"
+         backupStaticAttributes="false"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         convertErrorsToExceptions="true"
+         convertNoticesToExceptions="true"
+         convertWarningsToExceptions="true"
+         processIsolation="false"
+         stopOnFailure="false"
+>
+    <testsuites>
+        <testsuite name="Package Test Suite">
+            <directory suffix=".php">./tests/</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="BRAINTREE_MERCHANT_ID" value=""/>
+        <env name="BRAINTREE_PUBLIC_KEY" value=""/>
+        <env name="BRAINTREE_PRIVATE_KEY" value=""/>
+        <env name="BRAINTREE_MODEL" value="Laravel\Cashier\Tests\User"/>
+    </php>
+</phpunit>
