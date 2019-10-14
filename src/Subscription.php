@@ -37,6 +37,26 @@ class Subscription extends Model
     protected $prorate = true;
 
     /**
+     * The coupon code being applied to the subscription.
+     *
+     * @var string|null
+     */
+    protected $coupon;
+
+    /**
+     * The coupon to apply to this subscription.
+     *
+     * @param  string  $coupon
+     * @return $this
+     */
+    public function withCoupon($coupon)
+    {
+        $this->coupon = $coupon;
+
+        return $this;
+    }
+
+    /**
      * Get the user that owns the subscription.
      */
     public function user()
@@ -195,7 +215,7 @@ class Subscription extends Model
 
         $subscription = $this->asBraintreeSubscription();
 
-        $response = BraintreeSubscription::update($subscription->id, [
+        $payload = [
             'planId' => $plan->id,
             'price' => number_format($plan->price * (1 + ($this->owner->taxPercentage() / 100)), 2, '.', ''),
             'neverExpires' => true,
@@ -203,7 +223,13 @@ class Subscription extends Model
             'options' => [
                 'prorateCharges' => $this->prorate,
             ],
-        ]);
+        ];
+
+        if ($this->coupon) {
+            $payload = $this->addCouponToPayload($payload);
+        }
+
+        $response = BraintreeSubscription::update($subscription->id, $payload);
 
         if ($response->success) {
             $this->fill([
@@ -254,6 +280,10 @@ class Subscription extends Model
                     'numberOfBillingCycles' => $discount->numberOfBillingCycles,
                 ],
             ]]];
+        }
+
+        if ($this->coupon) {
+            $options = $this->addCouponToPayload($options);
         }
 
         $this->cancelNow();
@@ -347,6 +377,25 @@ class Subscription extends Model
                 'remove' => $removeOthers ? $this->currentDiscounts() : [],
             ],
         ]);
+    }
+
+    /**
+     * Add the coupon discount to the Braintree payload.
+     *
+     * @param  array  $payload
+     * @return array
+     */
+    protected function addCouponToPayload(array $payload)
+    {
+        if (! isset($payload['discounts']['add'])) {
+            $payload['discounts']['add'] = [];
+        }
+
+        $payload['discounts']['add'][] = [
+            'inheritedFromId' => $this->coupon,
+        ];
+
+        return $payload;
     }
 
     /**
