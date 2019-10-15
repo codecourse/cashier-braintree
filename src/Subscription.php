@@ -196,7 +196,7 @@ class Subscription extends Model
      * @return $this|\Laravel\Cashier\Subscription
      * @throws \Exception
      */
-    public function swap($plan)
+    public function swap($plan, array $subscriptionOptions = [])
     {
         if ($this->onGracePeriod() && $this->braintree_plan === $plan) {
             return $this->resume();
@@ -210,12 +210,12 @@ class Subscription extends Model
         $plan = BraintreeService::findPlan($plan);
 
         if ($this->wouldChangeBillingFrequency($plan) && $this->prorate) {
-            return $this->swapAcrossFrequencies($plan);
+            return $this->swapAcrossFrequencies($plan, $subscriptionOptions);
         }
 
         $subscription = $this->asBraintreeSubscription();
 
-        $payload = [
+        $payload = array_merge([
             'planId' => $plan->id,
             'price' => number_format($plan->price * (1 + ($this->owner->taxPercentage() / 100)), 2, '.', ''),
             'neverExpires' => true,
@@ -223,7 +223,7 @@ class Subscription extends Model
             'options' => [
                 'prorateCharges' => $this->prorate,
             ],
-        ];
+        ], $subscriptionOptions);
 
         if ($this->coupon) {
             $payload = $this->addCouponToPayload($payload);
@@ -262,7 +262,7 @@ class Subscription extends Model
      * @return \Laravel\Cashier\Subscription
      * @throws \Exception
      */
-    protected function swapAcrossFrequencies($plan): self
+    protected function swapAcrossFrequencies($plan, $subscriptionOptions): self
     {
         $currentPlan = BraintreeService::findPlan($this->braintree_plan);
 
@@ -285,6 +285,8 @@ class Subscription extends Model
         if ($this->coupon) {
             $options = $this->addCouponToPayload($options);
         }
+
+        $options = array_merge_recursive($options, $subscriptionOptions);
 
         $this->cancelNow();
 
